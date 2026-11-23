@@ -1,0 +1,20 @@
+# 自动保存、备份和锁文件
+/auto-save-list/
+*~
+\#*\#
+.\#*
+
+# 已安装的包和编译产物
+/elpa/
+*.elc
+*.eln
+/eln-cache/
+
+# 运行时缓存和历史记录
+/url/
+/projects
+/recentf.eld
+/history
+/savehist
+/places
+/transient/
