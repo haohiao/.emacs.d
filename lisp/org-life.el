@@ -8,6 +8,7 @@
 ;;; 加载依赖
 
 (require 'org)
+(require 'cl-lib)
 (require 'seq)
 (require 'subr-x)
 
@@ -120,6 +121,35 @@
     (format "%s-%04d" prefix (1+ maximum))))
 
 ;;; 登记表
+
+(defun life-set-register-status ()
+  "修改当前事件或规划登记行的状态。"
+  (interactive)
+  (unless (and (derived-mode-p 'org-mode) buffer-file-name
+               (equal (file-name-nondirectory buffer-file-name) "目录.org")
+               (org-at-table-p) (not (org-at-table-hline-p)))
+    (user-error "请将光标放在目录.org 的登记表数据行"))
+  (let* ((row (org-table-to-lisp))
+         (header (car row))
+         (column (and (listp header) (cl-position "状态" header :test #'equal)))
+         (id (string-trim (save-excursion (org-table-goto-column 1) (org-table-get-field))))
+         (heading (save-excursion
+                    (org-back-to-heading t)
+                    (org-get-heading t t t t)))
+         (parent (save-excursion
+                   (and (org-up-heading-safe) (org-get-heading t t t t)))))
+    (unless (and column (member heading '("事件" "规划")) (equal parent "登记")
+                 (string-match-p (if (equal heading "事件") "\\`E-[0-9]+\\'" "\\`P-[0-9]+\\'") id))
+      (user-error "请将光标放在登记区域的事件或规划数据行"))
+    (let* ((key (read-char-choice "状态： [t]未启 [i]进行 [p]暂停 [d]完成 [c]终止 "
+                                  '(?t ?i ?p ?d ?c)))
+           (status (cdr (assq key '((?t . "未启") (?i . "进行") (?p . "暂停")
+                                    (?d . "完成") (?c . "终止"))))))
+      (org-table-goto-column (1+ column))
+      (org-table-blank-field)
+      (insert status)
+      (org-table-align)
+      (message "登记状态已设为%s（请保存文件）" status))))
 
 (defun life--table-position (file heading)
   "在 FILE 当前缓冲区中查找「* 登记」下 HEADING 表格的插入位置。
@@ -426,6 +456,7 @@
 (define-key life-map (kbd "p") #'life-new-plan)
 (define-key life-map (kbd "t") #'life-new-task)
 (define-key life-map (kbd "a") #'life-refresh-agenda)
+(define-key life-map (kbd "s") #'life-set-register-status)
 (define-key life-map (kbd "d e") #'life-delete-event)
 (define-key life-map (kbd "d p") #'life-delete-plan)
 (define-key life-map (kbd "d t") #'life-delete-task)
